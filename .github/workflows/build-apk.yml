@@ -1,0 +1,61 @@
+name: Compilar APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Descomprimir proyecto ZIP si se subió comprimido
+        run: |
+          if [ ! -f package.json ]; then
+            ZIP_FILE=$(find . -maxdepth 3 -type f -name '*.zip' | head -n 1 || true)
+            if [ -n "$ZIP_FILE" ]; then
+              echo "Descomprimiendo $ZIP_FILE..."
+              unzip -o "$ZIP_FILE" || python3 -m zipfile -e "$ZIP_FILE" .
+            fi
+          fi
+          if [ ! -f package.json ]; then
+            SUB_PKG=$(find . -maxdepth 3 -type f -name 'package.json' | head -n 1 || true)
+            if [ -n "$SUB_PKG" ]; then
+              SUB_DIR=$(dirname "$SUB_PKG")
+              cp -r "$SUB_DIR"/. .
+            fi
+          fi
+          if [ ! -f package.json ]; then
+            echo "ERROR: No se encontró el .zip del proyecto ni package.json en tu repositorio."
+            echo "Ve a tu repo en GitHub -> Add file -> Upload files y sube el .zip descargado desde la app."
+            exit 1
+          fi
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+      - name: Instalar dependencias y preparar proyecto Android
+        run: |
+          npm install
+          if [ ! -f android/gradlew ]; then
+            mv android android-overrides
+            npx cap add android
+            cp -r android-overrides/. android/
+            rm -rf android-overrides
+          fi
+          npx cap sync android
+      - name: Compilar APK Debug
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - name: Subir APK compilado
+        uses: actions/upload-artifact@v4
+        with:
+          name: Editor_Avanzado_M_vil-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          

@@ -40,8 +40,12 @@ jobs:
       - name: Instalar dependencias y preparar proyecto Android
         run: |
           npm install
-          if [ -f capacitor.config.ts ] && [ ! -d node_modules/typescript ]; then
-            npm install --no-save typescript
+          if [ ! -f dist/index.html ]; then
+            mkdir -p dist
+            printf '<!doctype html><html><body><h1>Editor Movil</h1></body></html>' > dist/index.html
+          fi
+          if [ -f capacitor.config.ts ]; then
+            node -e "const fs=require('fs');const s=fs.readFileSync('capacitor.config.ts','utf8');const g=(k,d)=>(s.match(new RegExp(k+':\\s*[\\x27\\x22]([^\\x27\\x22]+)[\\x27\\x22]'))||[])[1]||d;const u=g('url','');fs.writeFileSync('capacitor.config.json',JSON.stringify({appId:g('appId','com.jafet.editormovil'),appName:g('appName','Editor Movil'),webDir:'dist',server:u?{androidScheme:'https',url:u,cleartext:false}:{androidScheme:'https'},plugins:{PushNotifications:{presentationOptions:['badge','sound','alert']}}},null,2));fs.unlinkSync('capacitor.config.ts');"
           fi
           if [ ! -f android/gradlew ]; then
             if [ -d android ]; then

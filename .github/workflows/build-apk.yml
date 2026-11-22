@@ -40,11 +40,19 @@ jobs:
       - name: Instalar dependencias y preparar proyecto Android
         run: |
           npm install
+          if [ -f capacitor.config.ts ] && [ ! -d node_modules/typescript ]; then
+            npm install --no-save typescript
+          fi
           if [ ! -f android/gradlew ]; then
-            mv android android-overrides
+            if [ -d android ]; then
+              mv android android-overrides
+            fi
             npx cap add android
-            cp -r android-overrides/. android/
-            rm -rf android-overrides
+            if [ -d android-overrides ]; then
+              rm -f android-overrides/app/build.gradle android-overrides/variables.gradle
+              cp -r android-overrides/. android/
+              rm -rf android-overrides
+            fi
           fi
           npx cap sync android
       - name: Compilar APK Debug
